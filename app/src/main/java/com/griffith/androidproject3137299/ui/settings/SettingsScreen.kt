@@ -48,10 +48,9 @@ import androidx.compose.ui.unit.dp
 
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
 
     var habitReminders by remember {mutableStateOf(true)}
-    var isDarkMode by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -109,7 +108,7 @@ fun SettingsScreen() {
                 title = "Dark mode",
                 description = if (isDarkMode) "On" else "Off",
                 checked = isDarkMode,
-                onCheckedChange = { isDarkMode = it }
+                onCheckedChange = onDarkModeChange
             )
         }
     }
