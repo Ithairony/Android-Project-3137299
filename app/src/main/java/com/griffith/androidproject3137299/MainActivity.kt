@@ -27,25 +27,37 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.core.content.edit
 import com.griffith.androidproject3137299.ui.settings.SettingsScreen
 import com.griffith.androidproject3137299.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Gets the preferences file
+        val prefs = getSharedPreferences("Settings", MODE_PRIVATE)
+
         setContent {
 
             // Declaring variable to change to dark mode and vice versa
             val systemDark = isSystemInDarkTheme()
-            var isDarkMode by rememberSaveable { mutableStateOf(systemDark) }
+            // Reads the saved values from the file
+            var isDarkMode by rememberSaveable { mutableStateOf(prefs.getBoolean("dark mode", systemDark)) }
 
             AppTheme( darkTheme = isDarkMode){
-                AppScaffold(isDarkMode = isDarkMode, onDarkModeChange = { isDarkMode = it })
+                AppScaffold(
+                    isDarkMode = isDarkMode,
+                    onDarkModeChange = {
+                        isDarkMode = it
+                        prefs.edit { putBoolean("dark mode", it) }
+                    }
+                )
             }
         }
     }
 }
-// Enum Class to hold values for the Bottom Bar
+// Enum Class to hold values for the Bottom Bar "Links"
 enum class Tab(val label: String, val icon: ImageVector) {
     Home("Home", Icons.Filled.Home),
     Reports("Reports", Icons.Filled.DateRange),
