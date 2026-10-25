@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import com.griffith.androidproject3137299.ui.settings.SettingsScreen
 import com.griffith.androidproject3137299.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -85,7 +86,7 @@ fun AppScaffold() {
             when (selectedTab) {
                 Tab.Home -> Text("Home screen")
                 Tab.Reports -> Text("Reports screen")
-                Tab.Settings -> Text("Settings screen")
+                Tab.Settings -> SettingsScreen()
             }
         }
     }
