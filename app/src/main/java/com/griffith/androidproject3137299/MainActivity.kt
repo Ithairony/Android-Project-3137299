@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.edit
+import com.griffith.androidproject3137299.ui.home.HomeScreen
 import com.griffith.androidproject3137299.ui.settings.SettingsScreen
 import com.griffith.androidproject3137299.ui.theme.AppTheme
 
@@ -101,7 +102,7 @@ fun AppScaffold(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
         ) {
             // Show a different screen depending on the selected tab
             when (selectedTab) {
-                Tab.Home -> Text("Home screen")
+                Tab.Home -> HomeScreen()
                 Tab.Reports -> Text("Reports screen")
                 Tab.Settings -> SettingsScreen(
                     isDarkMode = isDarkMode,
