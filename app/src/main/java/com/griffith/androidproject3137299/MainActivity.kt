@@ -102,7 +102,7 @@ fun AppScaffold(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
         ) {
             // Show a different screen depending on the selected tab
             when (selectedTab) {
-                Tab.Home -> HomeScreen()
+                Tab.Home -> HomeScreen(onAddHabit = { })
                 Tab.Reports -> Text("Reports screen")
                 Tab.Settings -> SettingsScreen(
                     isDarkMode = isDarkMode,
