@@ -34,9 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.griffith.androidproject3137299.ui.theme.AppTheme
+import com.griffith.androidproject3137299.ui.components.SectionLabel
+import com.griffith.androidproject3137299.ui.components.StreakCard
 
 // Declaring a fake Habit just for design purposes
 data class Habit(
@@ -82,7 +82,7 @@ fun HabitRow(habit: Habit, onToggle: () -> Unit) {
                             else Color.Transparent),
                 contentAlignment = Alignment.Center
                 ) {
-                // If an habit is done it adds a check Icon
+                // If a habit is done it adds a check Icon
                     if (habit.isDone) {
                         Icon(
                             imageVector = Icons.Filled.Check,
@@ -149,6 +149,16 @@ fun HomeScreen() {
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        text = when {
+                            habits.isEmpty() -> "No habits yet, add your first one"
+                            remaining == 0 -> "All done for today!"
+                            remaining == 1 -> "1 habit to complete"
+                            else -> "$remaining habits to complete"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 // Round container to store user Initials
                 Box(
@@ -169,6 +179,8 @@ fun HomeScreen() {
 
         }
 
+        item { StreakCard(days = 12) }
+
         // Item for the progress bar on top as depending on the ammount of habits it stays out of the screen
         item {
             Column(
@@ -178,14 +190,10 @@ fun HomeScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = when {
-                        habits.isEmpty() -> "No habits yet, add your first one"
-                        remaining == 0 -> "All done for today!"
-                        remaining == 1 -> "1 habit to complete"
-                        else -> "$remaining habits to complete"
-                    },
+                    text = "Progress",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(8.dp))
                 LinearProgressIndicator(
@@ -199,6 +207,7 @@ fun HomeScreen() {
             }
         }
 
+        item { SectionLabel("Today's checklist") }
         // One HabitRow per habit
         items(habits, key = { it.id }) { habit ->
             HabitRow(

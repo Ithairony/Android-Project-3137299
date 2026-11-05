@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.griffith.androidproject3137299.ui.components.SectionLabel
 
 
 @Composable
@@ -110,16 +111,6 @@ fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
             )
         }
     }
-}
-
-@Composable
-fun SectionLabel(title : String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 16.dp)
-    )
 }
 
 // A card that groups several setting rows.
