@@ -21,13 +21,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.edit
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.griffith.androidproject3137299.ui.addhabit.AddHabitScreen
 import com.griffith.androidproject3137299.ui.home.HomeScreen
 import com.griffith.androidproject3137299.ui.settings.SettingsScreen
 import com.griffith.androidproject3137299.ui.theme.AppTheme
@@ -44,16 +47,37 @@ class MainActivity : ComponentActivity() {
             // Declaring variable to change to dark mode and vice versa
             val systemDark = isSystemInDarkTheme()
             // Reads the saved values from the file
-            var isDarkMode by rememberSaveable { mutableStateOf(prefs.getBoolean("dark mode", systemDark)) }
-
-            AppTheme( darkTheme = isDarkMode){
-                AppScaffold(
-                    isDarkMode = isDarkMode,
-                    onDarkModeChange = {
-                        isDarkMode = it
-                        prefs.edit { putBoolean("dark mode", it) }
-                    }
+            var isDarkMode by rememberSaveable {
+                mutableStateOf(
+                    prefs.getBoolean(
+                        "dark mode",
+                        systemDark
+                    )
                 )
+            }
+
+            AppTheme(darkTheme = isDarkMode) {
+
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "main") {
+
+                    // The main app with the bottom bar
+                    composable("main") {
+                        AppScaffold(
+                            isDarkMode = isDarkMode,
+                            onDarkModeChange = {
+                                isDarkMode = it
+                                prefs.edit { putBoolean("dark mode", it) }
+                            },
+                            onAddHabit = { navController.navigate("addHabit") }
+                        )
+                    }
+
+                    // Full page, opened from the + button
+                    composable("addHabit") {
+                        AddHabitScreen(onBack = { navController.popBackStack() })
+                    }
+                }
             }
         }
     }
@@ -66,9 +90,9 @@ enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun AppScaffold(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
+fun AppScaffold(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit, onAddHabit: () -> Unit) {
 
-    var selectedTab by remember { mutableStateOf(Tab.Home) }
+    var selectedTab by rememberSaveable { mutableStateOf(Tab.Home) }
     Scaffold(
         bottomBar = {
             NavigationBar(
@@ -102,7 +126,7 @@ fun AppScaffold(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
         ) {
             // Show a different screen depending on the selected tab
             when (selectedTab) {
-                Tab.Home -> HomeScreen(onAddHabit = { })
+                Tab.Home -> HomeScreen(onAddHabit = onAddHabit)
                 Tab.Reports -> Text("Reports screen")
                 Tab.Settings -> SettingsScreen(
                     isDarkMode = isDarkMode,
