@@ -1,5 +1,6 @@
 package com.griffith.androidproject3137299.ui.settings
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -41,8 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.provider.Settings
 import com.griffith.androidproject3137299.ui.components.SectionLabel
 
 
@@ -50,6 +54,7 @@ import com.griffith.androidproject3137299.ui.components.SectionLabel
 fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
 
     var habitReminders by remember {mutableStateOf(true)}
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -96,6 +101,19 @@ fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
                 title = "Quiet hours",
                 description = "PLACEHOLDER -22:00 to 07:00",
                 onClick = { }
+            )
+            HorizontalDivider()
+            SettingsNavRow(
+                icon = Icons.Outlined.Tune,
+                title = "Notification settings",
+                description = "Manage how reminders appear",
+                onClick = {
+                    // Implicit intent: asks Android to open its notification settings for this app
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    context.startActivity(intent)
+                }
             )
         }
 
