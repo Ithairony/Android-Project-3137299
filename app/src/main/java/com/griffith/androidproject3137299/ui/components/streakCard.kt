@@ -13,7 +13,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
@@ -28,7 +30,8 @@ import androidx.compose.ui.unit.dp
 fun StreakCard(
     days: Int,
     title: String = "Current Streak",
-    description: String = "Well Done Cabron!"
+    description: String = "Well Done Cabron!",
+    onShare: (() -> Unit)? = null
 ) {
     OutlinedCard(
         modifier = Modifier
@@ -56,7 +59,7 @@ fun StreakCard(
                 )
             }
             Spacer(Modifier.width(16.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
@@ -73,6 +76,17 @@ fun StreakCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            // Shows share streak button
+            if (onShare != null) {
+                IconButton(onClick = onShare) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = "Share streak",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.griffith.androidproject3137299.ui.home
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AddTask
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -29,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
@@ -36,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,7 +55,20 @@ data class Habit(
     val isDone: Boolean
 )
 // Fake data for designing the Home screen, replaced by the database later
-val fakeHabits = emptyList<Habit>()
+//val fakeHabits = emptyList<Habit>()
+
+// Fake data for designing the Home screen, replaced by the database later
+val fakeHabits = listOf(
+    Habit(1, "Read for 15 minutes", "Mobile development notes", "08:00", isDone = true),
+    Habit(2, "Apply for 2 jobs", "Android roles", "18:30", isDone = true),
+    Habit(3, "Review code notes", "Summarize the day", "21:00", isDone = false),
+    Habit(4, "Go to the gym", "Biceps and chest", "22:00", isDone = false),
+    Habit(5, "Drink 2L of water", "Keep a bottle on the desk", "10:00", isDone = false),
+    Habit(6, "Walk 8,000 steps", "Lunch break walk", "13:00", isDone = false),
+    Habit(7, "Practice Kotlin", "One small exercise", "16:00", isDone = false),
+    Habit(8, "Meditate for 10 minutes", "Breathing before dinner", "19:30", isDone = false),
+    Habit(9, "No phone after 23:00", "Wind down for sleep", "23:00", isDone = false)
+)
 
 @Composable
 fun HabitRow(habit: Habit, onToggle: () -> Unit) {
@@ -164,6 +181,13 @@ fun HomeScreen(onAddHabit: () -> Unit) {
     // Variable to store remaining tasks
     val remaining = habits.count { !it.isDone }
 
+    val context = LocalContext.current
+
+    // Number of habits completed today
+    val done = habits.count { it.isDone }
+    // Hardcoded until the database can calculate it
+    val streakDays = 12
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -218,7 +242,19 @@ fun HomeScreen(onAddHabit: () -> Unit) {
 
             }
 
-            item { StreakCard(days = 12) }
+            item {
+                StreakCard(
+                    days = streakDays,
+                    onShare = {
+                        // Implicit intent: share the current streak
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, "I'm on a $streakDays day habit streak!")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share your streak"))
+                    }
+                )
+            }
 
             if ( habits.isEmpty()) {
                 // Display the call to action
@@ -247,6 +283,29 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                         )
+
+                        // Share button only appears once every habit is done
+                        if ( remaining == 0 ) {
+                            TextButton(
+                                onClick = {
+                                    // Implicit intent: Android shows every app that can send text
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        // Message to be shown when sharing intent
+                                        putExtra(Intent.EXTRA_TEXT, "I've completed all ${habits.size} of my habits today!")
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share your progress"))
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Share,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("Share progress")
+                            }
+                        }
                     }
                 }
                 item { SectionLabel("Today's checklist") }
