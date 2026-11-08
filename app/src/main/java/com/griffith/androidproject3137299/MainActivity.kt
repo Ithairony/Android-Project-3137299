@@ -17,6 +17,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,25 +58,27 @@ class MainActivity : ComponentActivity() {
             }
 
             AppTheme(darkTheme = isDarkMode) {
+                // Surface makes sure theme background is applied to all navigation pages
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    val navController = rememberNavController()
+                    NavHost(navController = navController, startDestination = "main") {
 
-                val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = "main") {
+                        // The main app with the bottom bar
+                        composable("main") {
+                            AppScaffold(
+                                isDarkMode = isDarkMode,
+                                onDarkModeChange = {
+                                    isDarkMode = it
+                                    prefs.edit { putBoolean("dark mode", it) }
+                                },
+                                onAddHabit = { navController.navigate("addHabit") }
+                            )
+                        }
 
-                    // The main app with the bottom bar
-                    composable("main") {
-                        AppScaffold(
-                            isDarkMode = isDarkMode,
-                            onDarkModeChange = {
-                                isDarkMode = it
-                                prefs.edit { putBoolean("dark mode", it) }
-                            },
-                            onAddHabit = { navController.navigate("addHabit") }
-                        )
-                    }
-
-                    // Full page, opened from the + button
-                    composable("addHabit") {
-                        AddHabitScreen(onBack = { navController.popBackStack() })
+                        // Full page, opened from the + button
+                        composable("addHabit") {
+                            AddHabitScreen(onBack = { navController.popBackStack() })
+                        }
                     }
                 }
             }
