@@ -3,6 +3,7 @@ package com.griffith.androidproject3137299.ui.home
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.griffith.androidproject3137299.openProfile
 import com.griffith.androidproject3137299.ui.components.SectionLabel
 import com.griffith.androidproject3137299.ui.components.StreakCard
 
@@ -228,6 +230,7 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
+                            .clickable { openProfile(context, "Igor Thairony") }
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
                         contentAlignment = Alignment.Center
                     ) {

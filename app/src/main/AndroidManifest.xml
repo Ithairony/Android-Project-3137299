@@ -23,6 +23,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!--   Profile page, opened from the Settings profile card with an explicit intent.
+        exported="false" means only this app can open it.     -->
+        <activity android:name=".ProfileActivity" android:exported="false" />
     </application>
 
 </manifest>

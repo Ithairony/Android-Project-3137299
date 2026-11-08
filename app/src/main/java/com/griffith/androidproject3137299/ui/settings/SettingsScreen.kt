@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.provider.Settings
+import com.griffith.androidproject3137299.ProfileActivity
+import com.griffith.androidproject3137299.openProfile
 import com.griffith.androidproject3137299.ui.components.SectionLabel
 
 
@@ -81,7 +83,7 @@ fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
         ProfileCard(
             name = "Igor Thairony",
             email = "ithairony21@gmail.com",
-            onClick = { }
+            onClick = { openProfile(context, "Igor Thairony") }
         )
 
         // Reminders Section
