@@ -56,6 +56,10 @@ import com.griffith.androidproject3137299.openProfile
 import com.griffith.androidproject3137299.sensors.rememberStepCount
 import com.griffith.androidproject3137299.ui.components.SectionLabel
 import com.griffith.androidproject3137299.ui.components.StreakCard
+import android.Manifest
+import android.location.Location
+import com.griffith.androidproject3137299.sensors.distanceInMetres
+import com.griffith.androidproject3137299.sensors.rememberLocation
 
 // Declaring a fake Habit just for design purposes
 data class Habit(
@@ -64,8 +68,13 @@ data class Habit(
     val description: String,
     val time: String,
     val isDone: Boolean,
-    val stepGoal: Int? = null   // Only set for step based habits
+    val stepGoal: Int? = null,        // Only set for step based habits
+    // Only set for location based habits
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val radius: Int = 100             // Metres from the location that count as "arrived"
 )
+
 // Fake data for designing the Home screen, replaced by the database later
 //val fakeHabits = emptyList<Habit>()
 
@@ -74,7 +83,7 @@ val fakeHabits = listOf(
     Habit(1, "Read for 15 minutes", "Mobile development notes", "08:00", isDone = true),
     Habit(2, "Apply for 2 jobs", "Android roles", "18:30", isDone = true),
     Habit(3, "Review code notes", "Summarize the day", "21:00", isDone = false),
-    Habit(4, "Go to the gym", "Biceps and chest", "22:00", isDone = false),
+    Habit(4, "Go to the gym", "Biceps and chest", "22:00", isDone = false, latitude = 53.3371, longitude = -6.2929),
     Habit(5, "Drink 2L of water", "Keep a bottle on the desk", "10:00", isDone = false),
     Habit(6, "Walk 8,000 steps", "Lunch break walk", "13:00", isDone = false, stepGoal = 30),
     Habit(7, "Practice Kotlin", "One small exercise", "16:00", isDone = false),
@@ -83,7 +92,7 @@ val fakeHabits = listOf(
 )
 
 @Composable
-fun HabitRow(habit: Habit, steps: Int?, onToggle: () -> Unit) {
+fun HabitRow(habit: Habit, steps: Int?, location: Location?, onToggle: () -> Unit) {
     OutlinedCard(
         onClick = onToggle, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)
     ) {
@@ -128,6 +137,22 @@ fun HabitRow(habit: Habit, steps: Int?, onToggle: () -> Unit) {
                 if (habit.stepGoal != null) {
                     Text(
                         text = "${steps ?: 0} / ${habit.stepGoal} steps",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Live distance, only for habits with a location ( ***ONLY FOR DEMO*** I don't want this displayed on the habit )
+                if (habit.latitude != null && habit.longitude != null) {
+                    val distance = location?.let { distanceInMetres(it, habit.latitude, habit.longitude) }
+                    Text(
+                        text = when {
+                            distance == null -> "Waiting for location…"
+                            distance <= habit.radius -> "You're here"
+                            distance < 1000 -> "${distance.toInt()} m away"
+                            else -> "%.1f km away".format(distance / 1000)
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
@@ -204,28 +229,35 @@ fun HomeScreen(onAddHabit: () -> Unit) {
     // Hardcoded until the database can calculate it
     val streakDays = 12
 
-    // Has the user allowed activity recognition (step counting)?
-    var hasStepPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context, android.Manifest.permission.ACTIVITY_RECOGNITION
-            ) == PackageManager.PERMISSION_GRANTED
-        )
+    // Checks if a permission has already been granted
+    fun isGranted(permission: String) =
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+    var hasStepPermission by remember { mutableStateOf(isGranted(Manifest.permission.ACTIVITY_RECOGNITION)) }
+    var hasLocationPermission by remember { mutableStateOf(isGranted(Manifest.permission.ACCESS_FINE_LOCATION)) }
+
+    // One launcher that can ask for several permissions in a single dialog flow
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        results[Manifest.permission.ACTIVITY_RECOGNITION]?.let { hasStepPermission = it }
+        results[Manifest.permission.ACCESS_FINE_LOCATION]?.let { hasLocationPermission = it }
     }
 
-// Shows Android's permission dialog and receives the answer
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> hasStepPermission = granted }
-
-    // Is there any habit that needs the step counter?
+    // Which sensors do the current habits need?
     val hasStepHabit = habits.any { it.stepGoal != null }
+    val hasLocationHabit = habits.any { it.latitude != null && it.longitude != null }
 
-    // Ask for permission only if a step habit exists
-    LaunchedEffect(hasStepHabit) {
-        if (hasStepHabit && !hasStepPermission) {
-            permissionLauncher.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+    // Ask only for the permissions that are actually needed
+    LaunchedEffect(hasStepHabit, hasLocationHabit) {
+        val needed = buildList {
+            if (hasStepHabit && !hasStepPermission) add(Manifest.permission.ACTIVITY_RECOGNITION)
+            if (hasLocationHabit && !hasLocationPermission) {
+                add(Manifest.permission.ACCESS_FINE_LOCATION)
+                add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            }
         }
+        if (needed.isNotEmpty()) permissionLauncher.launch(needed.toTypedArray())
     }
 
     // Listen to the sensor only when it's useful
@@ -237,6 +269,23 @@ fun HomeScreen(onAddHabit: () -> Unit) {
         habits.forEachIndexed { index, habit ->
             val goal = habit.stepGoal
             if (goal != null && !habit.isDone && steps >= goal) {
+                habits[index] = habit.copy(isDone = true)
+            }
+        }
+    }
+
+    // Listen to GPS only when a location habit exists and permission was given
+    val location = rememberLocation(enabled = hasLocationPermission && hasLocationHabit)
+
+    // Every time the position changes, complete any location habit the user has arrived at
+    LaunchedEffect(location) {
+        val current = location ?: return@LaunchedEffect
+        habits.forEachIndexed { index, habit ->
+            val lat = habit.latitude
+            val lng = habit.longitude
+            if (lat != null && lng != null && !habit.isDone &&
+                distanceInMetres(current, lat, lng) <= habit.radius
+            ) {
                 habits[index] = habit.copy(isDone = true)
             }
         }
@@ -378,6 +427,7 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                     HabitRow(
                         habit = habit,
                         steps = steps,
+                        location = location,
                         onToggle = {
                             val index = habits.indexOf(habit)
                             habits[index] = habit.copy(isDone = !habit.isDone)

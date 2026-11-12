@@ -4,6 +4,10 @@
 
     <!-- Needed to read the step counter sensor -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Needed to read the location tracker sensor    -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
