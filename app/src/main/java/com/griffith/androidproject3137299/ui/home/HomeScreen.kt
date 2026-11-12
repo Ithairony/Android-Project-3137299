@@ -1,6 +1,9 @@
 package com.griffith.androidproject3137299.ui.home
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +37,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +51,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.griffith.androidproject3137299.openProfile
+import com.griffith.androidproject3137299.sensors.rememberStepCount
 import com.griffith.androidproject3137299.ui.components.SectionLabel
 import com.griffith.androidproject3137299.ui.components.StreakCard
 
@@ -54,7 +63,8 @@ data class Habit(
     val name: String,
     val description: String,
     val time: String,
-    val isDone: Boolean
+    val isDone: Boolean,
+    val stepGoal: Int? = null   // Only set for step based habits
 )
 // Fake data for designing the Home screen, replaced by the database later
 //val fakeHabits = emptyList<Habit>()
@@ -66,47 +76,44 @@ val fakeHabits = listOf(
     Habit(3, "Review code notes", "Summarize the day", "21:00", isDone = false),
     Habit(4, "Go to the gym", "Biceps and chest", "22:00", isDone = false),
     Habit(5, "Drink 2L of water", "Keep a bottle on the desk", "10:00", isDone = false),
-    Habit(6, "Walk 8,000 steps", "Lunch break walk", "13:00", isDone = false),
+    Habit(6, "Walk 8,000 steps", "Lunch break walk", "13:00", isDone = false, stepGoal = 30),
     Habit(7, "Practice Kotlin", "One small exercise", "16:00", isDone = false),
     Habit(8, "Meditate for 10 minutes", "Breathing before dinner", "19:30", isDone = false),
     Habit(9, "No phone after 23:00", "Wind down for sleep", "23:00", isDone = false)
 )
 
 @Composable
-fun HabitRow(habit: Habit, onToggle: () -> Unit) {
+fun HabitRow(habit: Habit, steps: Int?, onToggle: () -> Unit) {
     OutlinedCard(
-        onClick = onToggle,
-        modifier = Modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp)
+        onClick = onToggle, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)
     ) {
         Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Check circle: filled with a tick when done, just an outline when not
-            Box( modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                .background(
-                    color = if (habit.isDone) MaterialTheme.colorScheme.primary
-                            else Color.Transparent),
-                contentAlignment = Alignment.Center
-                ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .background(
+                        color = if (habit.isDone) MaterialTheme.colorScheme.primary
+                        else Color.Transparent
+                    ), contentAlignment = Alignment.Center
+            ) {
                 // If a habit is done it adds a check Icon
-                    if (habit.isDone) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = "Done",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                if (habit.isDone) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Done",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)){
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = habit.name,
                     style = MaterialTheme.typography.bodyLarge,
@@ -117,11 +124,19 @@ fun HabitRow(habit: Habit, onToggle: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // Live progress, only for habits with a step goal
+                if (habit.stepGoal != null) {
+                    Text(
+                        text = "${steps ?: 0} / ${habit.stepGoal} steps",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
             // Reminder time in a small chip
             Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(8.dp)
+                color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
                     text = habit.time,
@@ -174,7 +189,6 @@ fun EmptyHabits() {
     }
 }
 
-
 @Composable
 fun HomeScreen(onAddHabit: () -> Unit) {
     // A list Compose watches: when an item changes, the screen redraws
@@ -190,14 +204,52 @@ fun HomeScreen(onAddHabit: () -> Unit) {
     // Hardcoded until the database can calculate it
     val streakDays = 12
 
+    // Has the user allowed activity recognition (step counting)?
+    var hasStepPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.ACTIVITY_RECOGNITION
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+// Shows Android's permission dialog and receives the answer
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> hasStepPermission = granted }
+
+    // Is there any habit that needs the step counter?
+    val hasStepHabit = habits.any { it.stepGoal != null }
+
+    // Ask for permission only if a step habit exists
+    LaunchedEffect(hasStepHabit) {
+        if (hasStepHabit && !hasStepPermission) {
+            permissionLauncher.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+        }
+    }
+
+    // Listen to the sensor only when it's useful
+    val steps = rememberStepCount(enabled = hasStepPermission && hasStepHabit)
+
+    // Every time the step count changes, complete any step habit that reached its goal
+    LaunchedEffect(steps) {
+        if (steps == null) return@LaunchedEffect
+        habits.forEachIndexed { index, habit ->
+            val goal = habit.stepGoal
+            if (goal != null && !habit.isDone && steps >= goal) {
+                habits[index] = habit.copy(isDone = true)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
         // One scrolling list for the whole screen: header first, then the habits
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp
+            ), verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Header
             item {
@@ -205,7 +257,7 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column (
+                    Column(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
@@ -232,8 +284,7 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                             .clip(CircleShape)
                             .clickable { openProfile(context, "Igor Thairony") }
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                        contentAlignment = Alignment.Center
-                    ) {
+                        contentAlignment = Alignment.Center) {
                         Text(
                             text = "IT",
                             style = MaterialTheme.typography.labelLarge,
@@ -247,19 +298,23 @@ fun HomeScreen(onAddHabit: () -> Unit) {
 
             item {
                 StreakCard(
-                    days = streakDays,
-                    onShare = {
+                    days = streakDays, onShare = {
                         // Implicit intent: share the current streak
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "I'm on a $streakDays day habit streak!")
+                            putExtra(
+                                Intent.EXTRA_TEXT, "I'm on a $streakDays day habit streak!"
+                            )
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share your streak"))
-                    }
-                )
+                        context.startActivity(
+                            Intent.createChooser(
+                                shareIntent, "Share your streak"
+                            )
+                        )
+                    })
             }
 
-            if ( habits.isEmpty()) {
+            if (habits.isEmpty()) {
                 // Display the call to action
                 item { EmptyHabits() }
             } else {
@@ -288,18 +343,24 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                         )
 
                         // Share button only appears once every habit is done
-                        if ( remaining == 0 ) {
+                        if (remaining == 0) {
                             TextButton(
                                 onClick = {
                                     // Implicit intent: Android shows every app that can send text
                                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         // Message to be shown when sharing intent
-                                        putExtra(Intent.EXTRA_TEXT, "I've completed all ${habits.size} of my habits today!")
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "I've completed all ${habits.size} of my habits today!"
+                                        )
                                     }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share your progress"))
-                                }
-                            ) {
+                                    context.startActivity(
+                                        Intent.createChooser(
+                                            shareIntent, "Share your progress"
+                                        )
+                                    )
+                                }) {
                                 Icon(
                                     imageVector = Icons.Outlined.Share,
                                     contentDescription = null,
@@ -316,6 +377,7 @@ fun HomeScreen(onAddHabit: () -> Unit) {
                 items(habits, key = { it.id }) { habit ->
                     HabitRow(
                         habit = habit,
+                        steps = steps,
                         onToggle = {
                             val index = habits.indexOf(habit)
                             habits[index] = habit.copy(isDone = !habit.isDone)
