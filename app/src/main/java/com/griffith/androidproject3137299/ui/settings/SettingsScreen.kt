@@ -1,5 +1,6 @@
 package com.griffith.androidproject3137299.ui.settings
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,9 +48,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.provider.Settings
-import com.griffith.androidproject3137299.ProfileActivity
 import com.griffith.androidproject3137299.openProfile
 import com.griffith.androidproject3137299.ui.components.SectionLabel
+import android.app.TimePickerDialog
+import androidx.core.content.edit
+import java.time.LocalTime
 
 
 @Composable
@@ -58,6 +61,16 @@ fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
     var habitReminders by remember {mutableStateOf(true)}
     val context = LocalContext.current
 
+    // Same preferences file used for dark mode
+    val prefs = remember { context.getSharedPreferences("Settings", Context.MODE_PRIVATE) }
+
+    // Quiet hours, 22:00 to 07:00 by default
+    var quietStart by remember {
+        mutableStateOf(LocalTime.parse(prefs.getString("quiet start", "22:00") ?: "22:00"))
+    }
+    var quietEnd by remember {
+        mutableStateOf(LocalTime.parse(prefs.getString("quiet end", "07:00") ?: "07:00"))
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,8 +114,29 @@ fun SettingsScreen(isDarkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
             SettingsNavRow(
                 icon = Icons.Outlined.Bedtime,
                 title = "Quiet hours",
-                description = "PLACEHOLDER -22:00 to 07:00",
-                onClick = { }
+                description = "$quietStart to $quietEnd",
+                onClick = {
+                    // First ask when quiet hours start...
+                    TimePickerDialog(context, { _, hour, minute ->
+                        val start = LocalTime.of(hour, minute)
+
+                        // ...then when they end
+                        TimePickerDialog(context, { _, endHour, endMinute ->
+                            val end = LocalTime.of(endHour, endMinute)
+                            quietStart = start
+                            quietEnd = end
+                            prefs.edit {
+                                putString("quiet start", start.toString())
+                                putString("quiet end", end.toString())
+                            }
+                        }, quietEnd.hour, quietEnd.minute, true).apply {
+                            setTitle("Quiet hours end")
+                        }.show()
+
+                    }, quietStart.hour, quietStart.minute, true).apply {
+                        setTitle("Quiet hours start")
+                    }.show()
+                }
             )
             HorizontalDivider()
             SettingsNavRow(
